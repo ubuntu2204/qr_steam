@@ -1,0 +1,45 @@
+name: qr_steam_example
+description: >
+  Example app demonstrating qr_steam:
+  • Windows – capture screen → compress to AVIF → fountain-coded animated QR
+  • Android – camera → scan QR frames → fountain decode → display AVIF image
+
+publish_to: none
+
+environment:
+  sdk: '>=3.4.0 <4.0.0'
+  flutter: '>=3.22.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # The package under development
+  qr_steam:
+    path: ../
+
+  # Screen capture (Windows / macOS / Linux)
+  screen_capturer: ^0.2.2
+
+  # AVIF encoding/decoding — cross-platform (Windows, Android, iOS, macOS, Linux)
+  flutter_avif: ^3.1.0
+
+  # HEIC / WebP compression (Android, iOS, macOS only)
+  flutter_image_compress: ^2.3.0
+
+  # Raw image processing (resize, encode PNG fallback)
+  image: ^4.2.0
+
+  # Temporary file storage
+  path_provider: ^2.1.3
+
+  # Camera & QR scanning permissions
+  permission_handler: ^11.3.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
