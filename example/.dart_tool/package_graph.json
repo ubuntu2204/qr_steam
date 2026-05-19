@@ -155,7 +155,7 @@
     },
     {
       "name": "meta",
-      "version": "1.17.0",
+      "version": "1.18.0",
       "dependencies": []
     },
     {
@@ -217,7 +217,7 @@
     },
     {
       "name": "test_api",
-      "version": "0.7.10",
+      "version": "0.7.11",
       "dependencies": [
         "async",
         "boolean_selector",
@@ -744,7 +744,7 @@
     },
     {
       "name": "json_annotation",
-      "version": "4.11.0",
+      "version": "4.12.0",
       "dependencies": [
         "meta"
       ]
@@ -870,7 +870,7 @@
     },
     {
       "name": "sqflite_common",
-      "version": "2.5.7",
+      "version": "2.5.8",
       "dependencies": [
         "meta",
         "path",
