@@ -15,3 +15,4 @@ A few resources to get you started if this is your first Flutter project:
 For help getting started with Flutter development, view the
 [online documentation](https://docs.flutter.dev/), which offers tutorials,
 samples, guidance on mobile development, and a full API reference.
+使用方式：在 VS Code 中通过 Remote SSH 连接 100.65.70.35，打开 C:\Users\ubuntu\project\example，按 F5 即可启动"Flutter Windows (Debug)"调试会话。
