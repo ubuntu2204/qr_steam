@@ -35,18 +35,48 @@ class ScreenshotService {
     final tempDir = await getTemporaryDirectory();
     final path = '${tempDir.path}/qr_steam_capture.png';
 
-    final result = await screenCapturer.capture(
-      mode: CaptureMode.screen,
-      imagePath: path,
-      silent: true,
-    );
-
-    if (result == null) throw StateError('Screen capture returned null');
+    if (Platform.isWindows) {
+      await _captureScreenWindows(path);
+    } else {
+      final result = await screenCapturer.capture(
+        mode: CaptureMode.screen,
+        imagePath: path,
+        silent: true,
+      );
+      if (result == null) throw StateError('Screen capture returned null');
+    }
 
     final file = File(path);
     final bytes = await file.readAsBytes();
     await file.delete();
     return bytes;
+  }
+
+  /// Windows 专用截图：通过 PowerShell + System.Drawing 捕获主屏幕。
+  static Future<void> _captureScreenWindows(String savePath) async {
+    // 转义路径中的单引号，防止 PowerShell 注入
+    final psPath = savePath.replaceAll("'", "''");
+    final script = [
+      "Add-Type -AssemblyName System.Windows.Forms,System.Drawing",
+      r"$s = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds",
+      r"$b = New-Object System.Drawing.Bitmap $s.Width, $s.Height",
+      r"$g = [System.Drawing.Graphics]::FromImage($b)",
+      r"$g.CopyFromScreen($s.Location, [System.Drawing.Point]::Empty, $s.Size)",
+      "\$b.Save('$psPath')",
+      r"$g.Dispose()",
+      r"$b.Dispose()",
+    ].join('; ');
+
+    final result = await Process.run(
+      'powershell',
+      ['-NonInteractive', '-NoProfile', '-Command', script],
+    );
+
+    if (result.exitCode != 0 || !File(savePath).existsSync()) {
+      throw StateError(
+        'Windows screen capture failed (exit ${result.exitCode}): ${result.stderr}',
+      );
+    }
   }
 }
 
