@@ -1,0 +1,24 @@
+# Root-level generated Flutter and editor artifacts.
+.dart_tool/
+.flutter-plugins-dependencies
+.vscode/
+build/
+
+# Generated Flutter and pub metadata from the example app.
+example/.dart_tool/
+example/.flutter-plugins-dependencies
+example/build/
+
+# Local Android build state and machine-specific files.
+example/android/.gradle/
+example/android/app/build/
+example/android/local.properties
+example/android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java
+
+# Android wrapper scripts and binaries are not needed in the published archive.
+example/android/gradlew
+example/android/gradlew.bat
+example/android/gradle/wrapper/gradle-wrapper.jar
+
+# Windows ephemeral plugin links are generated locally.
+example/windows/flutter/ephemeral/

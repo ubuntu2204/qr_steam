@@ -207,4 +207,4 @@ example/
 
 ## 许可证
 
-MIT License
+BSD 3-Clause，详见仓库根目录下的 LICENSE。

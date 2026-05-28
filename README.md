@@ -171,4 +171,4 @@ With the Robust Soliton Distribution, decoding succeeds with high probability af
 
 ## License
 
-MIT
+BSD 3-Clause. See the LICENSE file in the repository root.
