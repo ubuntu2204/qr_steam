@@ -28,7 +28,7 @@ class HomePage extends StatelessWidget {
             _DemoCard(
               icon: Icons.desktop_windows,
               title: '发送端（Windows）',
-              description: '截图 → AVIF/HEIC 压缩 → 喷泉码动态 QR',
+              description: '截图 → 压缩 → 普通分片 / 喷泉码动态 QR',
               onTap: () => Navigator.pushNamed(context, '/sender'),
             ),
             const SizedBox(height: 16),
@@ -36,7 +36,7 @@ class HomePage extends StatelessWidget {
             _DemoCard(
               icon: Icons.camera_alt,
               title: '接收端（Android）',
-              description: '摄像头扫描 → 喷泉码解码 → 显示图片',
+              description: '摄像头扫描 → 普通分片 / 喷泉码解码 → 显示图片',
               onTap: () => Navigator.pushNamed(context, '/receiver'),
             ),
           ],

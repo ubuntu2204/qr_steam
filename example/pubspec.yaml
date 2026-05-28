@@ -44,6 +44,10 @@ dev_dependencies:
 dependency_overrides:
   flutter_avif_android:
     path: ../third_party/flutter_avif_android
+  flutter_image_compress_common:
+    path: ../third_party/flutter_image_compress_common
+  mobile_scanner:
+    path: ../third_party/mobile_scanner
 
 flutter:
   uses-material-design: true

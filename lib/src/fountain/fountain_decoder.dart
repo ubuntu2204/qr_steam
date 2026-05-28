@@ -28,6 +28,8 @@ class FountainDecoder {
   // 已恢复的源块列表，null 表示尚未恢复
   late List<Uint8List?> _recovered;
   int _recoveredCount = 0; // 已成功恢复的块数
+  int _acceptedPacketCount = 0; // 已接收的唯一有效包数
+  final Set<int> _seenSeqNos = <int>{};
 
   /// 还未被完全解码、仍需参与传播的活跃包
   final List<_ActivePacket> _active = [];
@@ -48,13 +50,22 @@ class FountainDecoder {
   /// 已恢复的源块数量。
   int get recoveredCount => _recoveredCount;
 
+  /// 已接收的唯一有效包数量（去重后）。
+  int get receivedPacketCount => _acceptedPacketCount;
+
   /// 源块总数（未收到任何包之前为 null）。
   int? get totalChunks => _numChunks;
 
   /// 解码进度，范围 [0.0, 1.0]。
   double get progress {
     if (_numChunks == null || _numChunks == 0) return 0.0;
-    return _recoveredCount / _numChunks!;
+    if (_complete) return 1.0;
+
+    final recoveredProgress = _recoveredCount / _numChunks!;
+    final estimatedPacketBudget = max(_numChunks!, (_numChunks! * 1.15).ceil());
+    final collectionProgress =
+        (_acceptedPacketCount / estimatedPacketBudget).clamp(0.0, 0.98);
+    return max(recoveredProgress, collectionProgress);
   }
 
   /// 解码得到的原始数据。
@@ -81,6 +92,11 @@ class FountainDecoder {
     } else if (!_matchesStream(packet)) {
       return false; // 不属于当前数据流，忽略
     }
+
+    if (!_seenSeqNos.add(packet.seqNo)) {
+      return _complete; // 同一帧重复扫到，忽略
+    }
+    _acceptedPacketCount++;
 
     // 还原该包引用的源块下标（必须与编码器逻辑完全一致）
     final indices = _deriveIndices(packet.seqNo, packet.degree, _numChunks!);
@@ -118,6 +134,8 @@ class FountainDecoder {
     _chunkSize = null;
     _recovered = [];
     _recoveredCount = 0;
+    _acceptedPacketCount = 0;
+    _seenSeqNos.clear();
     _active.clear();
     _propagationQueue.clear();
     _initialized = false;

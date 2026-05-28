@@ -214,12 +214,11 @@ packages:
     source: hosted
     version: "2.4.0"
   flutter_image_compress_common:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
-      name: flutter_image_compress_common
-      sha256: c5c5d50c15e97dd7dc72ff96bd7077b9f791932f2076c5c5b6c43f2c88607bfb
-      url: "https://pub.dev"
-    source: hosted
+      path: "../third_party/flutter_image_compress_common"
+      relative: true
+    source: path
     version: "1.0.6"
   flutter_image_compress_macos:
     dependency: transitive
@@ -392,12 +391,11 @@ packages:
     source: hosted
     version: "1.18.0"
   mobile_scanner:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
-      name: mobile_scanner
-      sha256: d234581c090526676fd8fab4ada92f35c6746e3fb4f05a399665d75a399fb760
-      url: "https://pub.dev"
-    source: hosted
+      path: "../third_party/mobile_scanner"
+      relative: true
+    source: path
     version: "5.2.3"
   objective_c:
     dependency: transitive

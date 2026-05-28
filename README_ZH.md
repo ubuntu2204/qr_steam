@@ -1,6 +1,6 @@
 # qr_steam
 
-一个通过**动态 QR 码**传输任意二进制数据的 Flutter 包，底层使用 **LT 喷泉码**（一种擦除纠错码）。灵感来源于 [txqr/QRStream](https://github.com/divan/txqr)。
+一个通过**动态 QR 码**传输任意二进制数据的 Flutter 插件，支持 **顺序分片** 与 **LT 喷泉码** 两种模式。灵感来源于 [txqr/QRStream](https://github.com/divan/txqr)。
 
 ## 工作原理
 
@@ -13,26 +13,28 @@
 AVIF / HEIC 压缩                        QrStreamReceiver 组件
       │                  QR 码流                │
       ▼         ───────────────────────►        ▼
-FountainEncoder                          FountainDecoder
-（LT 喷泉码编码）                         （置信传播解码）
+SequentialEncoder /                     SequentialDecoder /
+FountainEncoder                         FountainDecoder
       │                                         │
       ▼                                         ▼
 QrStreamSender 组件                     AVIF/HEIC 字节
 （动态 QR 显示）                         Image.memory(bytes)
 ```
 
-### 为什么用喷泉码？
+### 两种模式的区别
 
-**喷泉码**允许接收方从任意足够多的数据包中重建原始数据——不需要按顺序接收，也不需要接收全部帧。这非常适合摄像头扫描这种天然存在噪声和丢帧的场景。
+`QrTransferMode.sequential`：按块顺序循环发送，逻辑简单，适合调试或稳定场景。
 
-理论上，接收约 **1.05k** 帧（k = 源数据块总数）后即可成功解码，冗余率仅约 5%。
+`QrTransferMode.fountain`：随机发送冗余包，接收方不需要按顺序看到所有帧，更适合真实摄像头扫描环境。
+
+理论上，喷泉码在接收约 **1.05k** 帧（k = 源数据块总数）后即可成功解码，冗余率仅约 5%。
 
 ## 特性
 
-- 🔢 **LT 喷泉码** — 鲁棒孤子分布采样度数，置信传播剥离解码器
+- 🔢 **双传输模式** — `QrTransferMode` 支持顺序分片和 LT 喷泉码
 - 📸 **Windows 发送端** — 截屏 → AVIF/HEIC 压缩 → 动态 QR 码
-- 📷 **Android 接收端** — 摄像头扫描 → 喷泉码解码 → 显示图片
-- 🧩 **模块化 API** — `FountainEncoder` / `FountainDecoder` 可独立于 QR 使用
+- 📷 **Android 接收端** — 摄像头扫描 → 顺序分片/喷泉码解码 → 显示图片
+- 🧩 **模块化 API** — `SequentialEncoder` / `SequentialDecoder` 与 `FountainEncoder` / `FountainDecoder` 都可独立于 QR 使用
 - 🖼️ **AVIF 全平台支持** — 通过 `flutter_avif` 在 Windows/Android/iOS 上均可编解码
 - 🔄 **HEIC/AVIF 可切换** — 发送端设置面板中一键切换压缩格式
 
@@ -60,6 +62,7 @@ QrStreamSender(
   fps: 8,                      // QR 码刷新帧率
   size: 350,                   // 组件尺寸（逻辑像素）
   chunkSize: 280,              // 每个喷泉码源块的字节数
+  mode: QrTransferMode.fountain,
 )
 ```
 
@@ -74,7 +77,24 @@ QrStreamReceiver(
   onProgress: (double progress, int packetsReceived) {
     print('${(progress * 100).toInt()}% — 已接收 $packetsReceived 帧');
   },
+  mode: QrTransferMode.fountain,
 )
+```
+
+### 单独使用顺序分片编解码器
+
+```dart
+final encoder = SequentialEncoder(data, chunkSize: 300);
+final packet = encoder.nextPacket();
+final qrString = packet.toBase64Url();
+
+final decoder = SequentialDecoder();
+final isComplete = decoder.addPacket(
+  SequentialPacket.fromBase64Url(scannedString),
+);
+if (isComplete) {
+  final original = decoder.decodedData!;
+}
 ```
 
 ### 单独使用喷泉码编解码器
@@ -101,8 +121,8 @@ if (isComplete) {
 
 | 平台      | 行为                                          |
 |---------|---------------------------------------------|
-| Windows | 截屏 → AVIF/HEIC 压缩 → 动态 QR 码流（发送端） |
-| Android | 摄像头扫描 QR 帧 → 喷泉码解码 → 显示图片（接收端）  |
+| Windows | 截屏 → AVIF/HEIC 压缩 → 顺序分片或喷泉码动态 QR |
+| Android | 摄像头扫描 QR 帧 → 顺序分片或喷泉码解码 → 显示图片 |
 | 其他     | 首页，可导航到发送端或接收端演示                  |
 
 ### 运行示例

@@ -165,7 +165,7 @@
     },
     {
       "name": "flutter_image_compress_common",
-      "rootUri": "file:///C:/Users/ubuntu/AppData/Local/Pub/Cache/hosted/pub.dev/flutter_image_compress_common-1.0.6",
+      "rootUri": "../../third_party/flutter_image_compress_common",
       "packageUri": "lib/",
       "languageVersion": "2.12"
     },
@@ -303,7 +303,7 @@
     },
     {
       "name": "mobile_scanner",
-      "rootUri": "file:///C:/Users/ubuntu/AppData/Local/Pub/Cache/hosted/pub.dev/mobile_scanner-5.2.3",
+      "rootUri": "../../third_party/mobile_scanner",
       "packageUri": "lib/",
       "languageVersion": "3.4"
     },

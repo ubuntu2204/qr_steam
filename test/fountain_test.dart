@@ -20,7 +20,7 @@ void main() {
     });
 
     test('average degree is reasonable (< k/2)', () {
-      final k = 100;
+      const k = 100;
       final rsd = RobustSoliton(k: k);
       final rng = Random(0);
       int total = 0;
@@ -84,15 +84,15 @@ void main() {
   // Encode / decode round-trip
   // ---------------------------------------------------------------------------
   group('FountainEncoder + FountainDecoder', () {
-    Uint8List _makeData(int size) =>
+    Uint8List makeData(int size) =>
         Uint8List.fromList(List.generate(size, (i) => (i * 31 + 7) % 256));
 
-    void _runRoundTrip({
+    void runRoundTrip({
       required int dataSize,
       required int chunkSize,
       double overheadFactor = 2.5,
     }) {
-      final original = _makeData(dataSize);
+      final original = makeData(dataSize);
       final encoder = FountainEncoder(original, chunkSize: chunkSize);
       final decoder = FountainDecoder();
 
@@ -113,27 +113,27 @@ void main() {
     }
 
     test('tiny data (< 1 chunk)', () {
-      _runRoundTrip(dataSize: 50, chunkSize: 100);
+      runRoundTrip(dataSize: 50, chunkSize: 100);
     });
 
     test('data exactly one chunk', () {
-      _runRoundTrip(dataSize: 200, chunkSize: 200);
+      runRoundTrip(dataSize: 200, chunkSize: 200);
     });
 
     test('small data (10 chunks)', () {
-      _runRoundTrip(dataSize: 1000, chunkSize: 100);
+      runRoundTrip(dataSize: 1000, chunkSize: 100);
     });
 
     test('medium data (50 chunks)', () {
-      _runRoundTrip(dataSize: 5000, chunkSize: 100);
+      runRoundTrip(dataSize: 5000, chunkSize: 100);
     });
 
     test('large data (100 chunks)', () {
-      _runRoundTrip(dataSize: 30000, chunkSize: 300);
+      runRoundTrip(dataSize: 30000, chunkSize: 300);
     });
 
     test('decoder handles duplicate packets gracefully', () {
-      final data = _makeData(600);
+      final data = makeData(600);
       final encoder = FountainEncoder(data, chunkSize: 100);
       final decoder = FountainDecoder();
 
@@ -151,8 +151,31 @@ void main() {
       expect(decoder.decodedData, equals(data));
     });
 
+    test('progress becomes visible after first unique packet', () {
+      final data = makeData(3000);
+      final encoder = FountainEncoder(data, chunkSize: 150);
+      final decoder = FountainDecoder();
+
+      decoder.addPacket(encoder.nextPacket());
+
+      expect(decoder.receivedPacketCount, 1);
+      expect(decoder.progress, greaterThan(0));
+    });
+
+    test('duplicate packets do not increase unique packet count', () {
+      final data = makeData(800);
+      final encoder = FountainEncoder(data, chunkSize: 100);
+      final decoder = FountainDecoder();
+
+      final first = encoder.nextPacket();
+      decoder.addPacket(first);
+      decoder.addPacket(first);
+
+      expect(decoder.receivedPacketCount, 1);
+    });
+
     test('decoder reset allows reuse', () {
-      final data = _makeData(500);
+      final data = makeData(500);
       final decoder = FountainDecoder();
 
       // First pass
@@ -178,7 +201,7 @@ void main() {
     });
 
     test('progress advances monotonically', () {
-      final data = _makeData(3000);
+      final data = makeData(3000);
       final encoder = FountainEncoder(data, chunkSize: 150);
       final decoder = FountainDecoder();
 

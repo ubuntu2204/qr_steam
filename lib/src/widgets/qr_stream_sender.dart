@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../fountain/fountain_encoder.dart';
+import '../sequential/sequential_encoder.dart';
+import '../transfer/qr_transfer_mode.dart';
 
 /// 将 [data] 以动态 QR 码流方式持续播放的组件。
 /// 每一帧编码一个喷泉码包，接收方无需全部扫描、不需按顺序接收。
@@ -29,6 +31,9 @@ class QrStreamSender extends StatefulWidget {
   /// 源块大小（字节）。越小 → 块数越多但单帧 QR 越小、越易扫描。默认 300
   final int chunkSize;
 
+  /// 传输模式。默认为喷泉码。
+  final QrTransferMode mode;
+
   /// QR 码纠错级别，默认 M（15% 恢复能力）
   final int errorCorrectionLevel;
 
@@ -38,6 +43,7 @@ class QrStreamSender extends StatefulWidget {
     this.fps = 5,
     this.size = 320,
     this.chunkSize = FountainEncoder.defaultChunkSize,
+    this.mode = QrTransferMode.fountain,
     this.errorCorrectionLevel = QrErrorCorrectLevel.M,
   });
 
@@ -46,10 +52,13 @@ class QrStreamSender extends StatefulWidget {
 }
 
 class _QrStreamSenderState extends State<QrStreamSender> {
-  late FountainEncoder _encoder; // 喷泉码编码器
+  late FountainEncoder _fountainEncoder; // 喷泉码编码器
+  late SequentialEncoder _sequentialEncoder; // 顺序分片编码器
   Timer? _timer; // 定时器，按 fps 刷新 QR
   String _currentQrData = ''; // 当前帧的 base64url 载荷
   int _frameIndex = 0; // 已播放帧数（展示用）
+  int _currentChunkIndex = 0; // 顺序模式下当前块序号（1-based）
+  int _currentFountainSeqNo = 0; // 喷泉模式下当前包序号
 
   @override
   void initState() {
@@ -62,15 +71,23 @@ class _QrStreamSenderState extends State<QrStreamSender> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.data != widget.data ||
         oldWidget.fps != widget.fps ||
-        oldWidget.chunkSize != widget.chunkSize) {
+        oldWidget.chunkSize != widget.chunkSize ||
+        oldWidget.mode != widget.mode) {
       _timer?.cancel();
       _reset();
     }
   }
 
   void _reset() {
-    _encoder = FountainEncoder(widget.data, chunkSize: widget.chunkSize);
+    _fountainEncoder =
+        FountainEncoder(widget.data, chunkSize: widget.chunkSize);
+    _sequentialEncoder = SequentialEncoder(
+      widget.data,
+      chunkSize: widget.chunkSize,
+    );
     _frameIndex = 0;
+    _currentChunkIndex = 0;
+    _currentFountainSeqNo = 0;
     _advance(); // 立即生成第一帧
     _timer = Timer.periodic(
       Duration(milliseconds: (1000 / widget.fps).round()),
@@ -80,12 +97,50 @@ class _QrStreamSenderState extends State<QrStreamSender> {
 
   /// 推进到下一帧：生成一个喷泉码包并更新组件。
   void _advance() {
-    final packet = _encoder.nextPacket();
+    late final String qrData;
+    late final int currentChunkIndex;
+    late final int currentFountainSeqNo;
+
+    switch (widget.mode) {
+      case QrTransferMode.fountain:
+        final packet = _fountainEncoder.nextPacket();
+        qrData = packet.toBase64Url();
+        currentChunkIndex = 0;
+        currentFountainSeqNo = packet.seqNo;
+      case QrTransferMode.sequential:
+        final packet = _sequentialEncoder.nextPacket();
+        qrData = packet.toBase64Url();
+        currentChunkIndex = packet.chunkIndex + 1;
+        currentFountainSeqNo = 0;
+    }
+
     if (mounted) {
       setState(() {
-        _currentQrData = packet.toBase64Url(); // 转为 base64url 填入 QR
+        _currentQrData = qrData;
         _frameIndex++;
+        _currentChunkIndex = currentChunkIndex;
+        _currentFountainSeqNo = currentFountainSeqNo;
       });
+    }
+  }
+
+  int get _numChunks {
+    switch (widget.mode) {
+      case QrTransferMode.fountain:
+        return _fountainEncoder.numChunks;
+      case QrTransferMode.sequential:
+        return _sequentialEncoder.numChunks;
+    }
+  }
+
+  String get _footerText {
+    switch (widget.mode) {
+      case QrTransferMode.fountain:
+        return '喷泉包 #$_currentFountainSeqNo  •  随机冗余  •  '
+            '$_numChunks chunks  •  ${widget.fps} fps';
+      case QrTransferMode.sequential:
+        return '顺序帧 #$_frameIndex  •  ${widget.mode.label}  •  '
+            '块 $_currentChunkIndex/$_numChunks  •  ${widget.fps} fps';
     }
   }
 
@@ -118,8 +173,7 @@ class _QrStreamSenderState extends State<QrStreamSender> {
         ),
         const SizedBox(height: 6),
         Text(
-          'Frame #$_frameIndex  •  ${_encoder.numChunks} chunks  •  '
-          '${widget.fps} fps',
+          _footerText,
           style: const TextStyle(fontSize: 11, color: Colors.grey),
         ),
       ],

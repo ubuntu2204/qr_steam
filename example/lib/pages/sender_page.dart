@@ -8,7 +8,7 @@ import '../services/image_service.dart';
 /// Windows 发送端页面：
 /// 1. 截取全屏截图。
 /// 2. 使用 [ImageCompressService] 压缩为 AVIF 或 HEIC。
-/// 3. 用喷泉码对压缩字节编码。
+/// 3. 使用普通分片或喷泉码对压缩字节编码。
 /// 4. 以动态 [QrStreamSender] 组件显示。
 class SenderPage extends StatefulWidget {
   const SenderPage({super.key});
@@ -37,6 +37,9 @@ class _SenderPageState extends State<SenderPage> {
   // 压缩格式：AVIF（全平台）或 HEIC（Android/iOS/macOS）
   ImageFormat _format = ImageFormat.avif;
 
+  // 传输模式：默认喷泉码，更适合摄像头丢帧场景。
+  QrTransferMode _mode = QrTransferMode.fountain;
+
   // ---------------------------------------------------------------------------
   // Actions
   // ---------------------------------------------------------------------------
@@ -62,7 +65,7 @@ class _SenderPageState extends State<SenderPage> {
         maxDimension: 1280,
       );
       _compressedSize = compressed.length;
-      // 3. 计算喷泉码分块数并更新 UI
+      // 3. 计算总块数并更新 UI
       _numChunks = (_compressedSize + _chunkSize - 1) ~/ _chunkSize;
 
       setState(() {
@@ -109,7 +112,21 @@ class _SenderPageState extends State<SenderPage> {
           ),
         ],
       ),
-      body: _buildBody(),
+      body: Column(
+        children: [
+          _ModeSwitchTile(
+            value: _mode == QrTransferMode.fountain,
+            onChanged: (enabled) {
+              setState(() {
+                _mode = enabled
+                    ? QrTransferMode.fountain
+                    : QrTransferMode.sequential;
+              });
+            },
+          ),
+          Expanded(child: _buildBody()),
+        ],
+      ),
       floatingActionButton: _state != _SenderState.streaming
           ? FloatingActionButton.extended(
               onPressed:
@@ -211,6 +228,7 @@ class _SenderPageState extends State<SenderPage> {
                   label: '压缩率',
                   value:
                       '${(_compressedSize / _rawSize * 100).toStringAsFixed(1)}%'),
+              _InfoChip(label: '传输模式', value: _mode.label),
               _InfoChip(label: '格式', value: _format.label),
               _InfoChip(label: '数据块数', value: '$_numChunks'),
               _InfoChip(label: '帧率', value: '$_fps fps'),
@@ -225,6 +243,7 @@ class _SenderPageState extends State<SenderPage> {
               data: _payload!,
               fps: _fps,
               chunkSize: _chunkSize,
+              mode: _mode,
               size: 360,
             ),
           ),
@@ -403,6 +422,29 @@ class _SettingsSheetState extends State<_SettingsSheet> {
             ),
           const SizedBox(height: 8),
         ],
+      ),
+    );
+  }
+}
+
+class _ModeSwitchTile extends StatelessWidget {
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  const _ModeSwitchTile({required this.value, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    final mode = value ? QrTransferMode.fountain : QrTransferMode.sequential;
+
+    return Material(
+      color: Theme.of(context).colorScheme.surfaceContainerLow,
+      child: SwitchListTile.adaptive(
+        value: value,
+        onChanged: onChanged,
+        secondary: Icon(value ? Icons.water_drop : Icons.view_week),
+        title: const Text('喷泉码加速'),
+        subtitle: Text(mode.description),
       ),
     );
   }

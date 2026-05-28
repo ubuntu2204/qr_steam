@@ -22,6 +22,24 @@
       ]
     },
     {
+      "name": "mobile_scanner",
+      "version": "5.2.3",
+      "dependencies": [
+        "flutter",
+        "flutter_web_plugins",
+        "plugin_platform_interface",
+        "web"
+      ]
+    },
+    {
+      "name": "flutter_image_compress_common",
+      "version": "1.0.6",
+      "dependencies": [
+        "flutter",
+        "flutter_image_compress_platform_interface"
+      ]
+    },
+    {
       "name": "flutter_avif_android",
       "version": "3.1.0",
       "dependencies": [
@@ -147,6 +165,34 @@
         "meta",
         "sky_engine",
         "vector_math"
+      ]
+    },
+    {
+      "name": "web",
+      "version": "1.1.1",
+      "dependencies": []
+    },
+    {
+      "name": "plugin_platform_interface",
+      "version": "2.1.8",
+      "dependencies": [
+        "meta"
+      ]
+    },
+    {
+      "name": "flutter_web_plugins",
+      "version": "0.0.0",
+      "dependencies": [
+        "flutter"
+      ]
+    },
+    {
+      "name": "flutter_image_compress_platform_interface",
+      "version": "1.0.5",
+      "dependencies": [
+        "cross_file",
+        "flutter",
+        "plugin_platform_interface"
       ]
     },
     {
@@ -384,23 +430,6 @@
       ]
     },
     {
-      "name": "flutter_image_compress_common",
-      "version": "1.0.6",
-      "dependencies": [
-        "flutter",
-        "flutter_image_compress_platform_interface"
-      ]
-    },
-    {
-      "name": "flutter_image_compress_platform_interface",
-      "version": "1.0.5",
-      "dependencies": [
-        "cross_file",
-        "flutter",
-        "plugin_platform_interface"
-      ]
-    },
-    {
       "name": "flutter_cache_manager",
       "version": "3.4.1",
       "dependencies": [
@@ -517,16 +546,6 @@
       ]
     },
     {
-      "name": "mobile_scanner",
-      "version": "5.2.3",
-      "dependencies": [
-        "flutter",
-        "flutter_web_plugins",
-        "plugin_platform_interface",
-        "web"
-      ]
-    },
-    {
       "name": "qr_flutter",
       "version": "4.1.0",
       "dependencies": [
@@ -550,6 +569,14 @@
       "name": "characters",
       "version": "1.4.1",
       "dependencies": []
+    },
+    {
+      "name": "cross_file",
+      "version": "0.3.5+2",
+      "dependencies": [
+        "meta",
+        "web"
+      ]
     },
     {
       "name": "protobuf",
@@ -623,25 +650,6 @@
       ]
     },
     {
-      "name": "plugin_platform_interface",
-      "version": "2.1.8",
-      "dependencies": [
-        "meta"
-      ]
-    },
-    {
-      "name": "web",
-      "version": "1.1.1",
-      "dependencies": []
-    },
-    {
-      "name": "flutter_web_plugins",
-      "version": "0.0.0",
-      "dependencies": [
-        "flutter"
-      ]
-    },
-    {
       "name": "platform",
       "version": "3.1.6",
       "dependencies": []
@@ -703,14 +711,6 @@
         "ffi",
         "meta",
         "path"
-      ]
-    },
-    {
-      "name": "cross_file",
-      "version": "0.3.5+2",
-      "dependencies": [
-        "meta",
-        "web"
       ]
     },
     {

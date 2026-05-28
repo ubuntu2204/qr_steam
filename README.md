@@ -1,6 +1,6 @@
 # qr_steam
 
-A Flutter package for streaming arbitrary binary data via **animated QR codes** using **LT fountain codes** (a type of erasure code). Inspired by [txqr/QRStream](https://github.com/divan/txqr).
+A Flutter plugin for streaming arbitrary binary data via **animated QR codes** using either **sequential chunks** or **LT fountain codes**. Inspired by [txqr/QRStream](https://github.com/divan/txqr).
 
 ## How it works
 
@@ -13,22 +13,24 @@ Screenshot (PNG)                       Camera preview
 AVIF / WebP compress                 QrStreamReceiver widget
       │                  QR codes           │
       ▼          ──────────────────►        ▼
+SequentialEncoder /                  SequentialDecoder /
 FountainEncoder                      FountainDecoder
-(LT fountain code)                   (belief propagation)
       │                                      │
       ▼                                      ▼
 QrStreamSender widget               AVIF/WebP bytes
 (animated QR display)               Image.memory(bytes)
 ```
 
-**Fountain codes** allow the receiver to reconstruct the original data from any sufficient subset of the transmitted packets — the receiver doesn't need to see every frame or see them in order. This is perfect for noisy/lossy camera scanning.
+`QrTransferMode.sequential` sends chunks in order and is easy to reason about.
+
+`QrTransferMode.fountain` emits random redundant packets, so the receiver can reconstruct the original data from any sufficient subset of frames. This is a better fit for noisy/lossy camera scanning.
 
 ## Features
 
-- 🔢 **LT fountain codes** — robust soliton distribution, belief-propagation decoder
+- 🔢 **Dual transfer modes** — sequential chunks or LT fountain packets via `QrTransferMode`
 - 📸 **Windows sender** — full-screen capture → AVIF/WebP compression → animated QR
-- 📷 **Android receiver** — camera scan → fountain decode → display image
-- 🧩 **Modular API** — use `FountainEncoder` / `FountainDecoder` independently of QR
+- 📷 **Android receiver** — camera scan → sequential/fountain decode → display image
+- 🧩 **Modular API** — use `SequentialEncoder` / `SequentialDecoder` or `FountainEncoder` / `FountainDecoder` independently of QR
 
 ## Getting started
 
@@ -52,6 +54,7 @@ QrStreamSender(
   fps: 8,                      // QR update rate
   size: 350,                   // widget size in logical pixels
   chunkSize: 280,              // bytes per fountain block
+  mode: QrTransferMode.fountain,
 )
 ```
 
@@ -66,7 +69,24 @@ QrStreamReceiver(
   onProgress: (double progress, int packetsReceived) {
     print('${(progress * 100).toInt()}% — $packetsReceived packets');
   },
+  mode: QrTransferMode.fountain,
 )
+```
+
+### Sequential codec (standalone)
+
+```dart
+final encoder = SequentialEncoder(data, chunkSize: 300);
+final packet = encoder.nextPacket();
+final qrString = packet.toBase64Url();
+
+final decoder = SequentialDecoder();
+final isComplete = decoder.addPacket(
+  SequentialPacket.fromBase64Url(scannedString),
+);
+if (isComplete) {
+  final original = decoder.decodedData!;
+}
 ```
 
 ### Fountain codec (standalone)
@@ -93,8 +113,8 @@ The `example/` directory contains a full Flutter app:
 
 | Platform | Behaviour |
 |----------|-----------|
-| Windows  | Capture screen → AVIF/WebP compress → animated QR stream |
-| Android  | Camera → scan QR frames → fountain decode → display image |
+| Windows  | Capture screen → AVIF/WebP compress → sequential or fountain QR stream |
+| Android  | Camera → scan QR frames → sequential or fountain decode → display image |
 | Others   | Home page with navigation to both demos |
 
 ### Running

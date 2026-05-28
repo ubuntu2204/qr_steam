@@ -5,6 +5,9 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../fountain/fountain_decoder.dart';
 import '../fountain/fountain_packet.dart';
+import '../sequential/sequential_decoder.dart';
+import '../sequential/sequential_packet.dart';
+import '../transfer/qr_transfer_mode.dart';
 
 /// [QrStreamReceiver] 解码完成时的回调类型
 typedef OnDecodedCallback = void Function(Uint8List data);
@@ -31,11 +34,15 @@ class QrStreamReceiver extends StatefulWidget {
   /// 叠加在摄像头预览上方的可选扫描框组件。
   final Widget? overlay;
 
+  /// 传输模式。发送端与接收端需要保持一致。
+  final QrTransferMode mode;
+
   const QrStreamReceiver({
     super.key,
     required this.onDecoded,
     this.onProgress,
     this.overlay,
+    this.mode = QrTransferMode.fountain,
   });
 
   @override
@@ -43,7 +50,8 @@ class QrStreamReceiver extends StatefulWidget {
 }
 
 class QrStreamReceiverState extends State<QrStreamReceiver> {
-  final FountainDecoder _decoder = FountainDecoder(); // 喷泉码解码器
+  final FountainDecoder _fountainDecoder = FountainDecoder();
+  final SequentialDecoder _sequentialDecoder = SequentialDecoder();
   final MobileScannerController _controller = MobileScannerController(
     detectionSpeed: DetectionSpeed.normal, // 平衡扫描速度与 CPU 占用
   );
@@ -57,12 +65,21 @@ class QrStreamReceiverState extends State<QrStreamReceiver> {
 
   /// 重置解码器并重启摄像头，准备接收下一流。
   void reset() {
-    _decoder.reset();
+    _fountainDecoder.reset();
+    _sequentialDecoder.reset();
     setState(() {
       _received = 0;
       _done = false;
     });
     _controller.start();
+  }
+
+  @override
+  void didUpdateWidget(covariant QrStreamReceiver oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.mode != widget.mode) {
+      reset();
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -78,22 +95,63 @@ class QrStreamReceiverState extends State<QrStreamReceiver> {
       if (raw == null || raw.isEmpty) continue;
 
       try {
-        // 尝试将扫描结果解析为喷泉码包
-        final pkt = FountainPacket.fromBase64Url(raw);
-        final complete = _decoder.addPacket(pkt);
+        final complete = _addPacket(raw);
+        final received = _receivedPacketCount;
 
-        setState(() => _received++);
-        widget.onProgress?.call(_decoder.progress, _received);
+        if (received == _received && !complete) {
+          continue;
+        }
+
+        setState(() => _received = received);
+        widget.onProgress?.call(_progress, _received);
 
         if (complete) {
           setState(() => _done = true);
           _controller.stop(); // 停止摄像头，节省电池
-          widget.onDecoded(_decoder.decodedData!);
+          widget.onDecoded(_decodedData!);
           return;
         }
       } catch (_) {
         // 不是有效的 QrStream 包（如普通二维码），静默忽略
       }
+    }
+  }
+
+  bool _addPacket(String raw) {
+    switch (widget.mode) {
+      case QrTransferMode.fountain:
+        final pkt = FountainPacket.fromBase64Url(raw);
+        return _fountainDecoder.addPacket(pkt);
+      case QrTransferMode.sequential:
+        final pkt = SequentialPacket.fromBase64Url(raw);
+        return _sequentialDecoder.addPacket(pkt);
+    }
+  }
+
+  double get _progress {
+    switch (widget.mode) {
+      case QrTransferMode.fountain:
+        return _fountainDecoder.progress;
+      case QrTransferMode.sequential:
+        return _sequentialDecoder.progress;
+    }
+  }
+
+  Uint8List? get _decodedData {
+    switch (widget.mode) {
+      case QrTransferMode.fountain:
+        return _fountainDecoder.decodedData;
+      case QrTransferMode.sequential:
+        return _sequentialDecoder.decodedData;
+    }
+  }
+
+  int get _receivedPacketCount {
+    switch (widget.mode) {
+      case QrTransferMode.fountain:
+        return _fountainDecoder.receivedPacketCount;
+      case QrTransferMode.sequential:
+        return _sequentialDecoder.receivedCount;
     }
   }
 
@@ -157,7 +215,7 @@ class QrStreamReceiverState extends State<QrStreamReceiver> {
                         const SizedBox(width: 8),
                         Text(
                           '已接收 $_received 帧  '
-                          '${(_decoder.progress * 100).toStringAsFixed(1)}%',
+                          '${(_progress * 100).toStringAsFixed(1)}%',
                           style: const TextStyle(
                               color: Colors.white, fontSize: 13),
                         ),

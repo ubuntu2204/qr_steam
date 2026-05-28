@@ -8,7 +8,7 @@ import 'package:qr_steam/qr_steam.dart';
 /// Android 接收端页面：
 /// 1. 请求摄像头权限。
 /// 2. 使用 [QrStreamReceiver] 扫描动态 QR 码流。
-/// 3. 喷泉码解码器重建并合压缩字节。
+/// 3. 使用普通分片或喷泉码重建压缩字节。
 /// 4. 自动识别 AVIF / HEIC 并使用对应解码器显示图片。
 class ReceiverPage extends StatefulWidget {
   const ReceiverPage({super.key});
@@ -25,6 +25,7 @@ class _ReceiverPageState extends State<ReceiverPage> {
   Uint8List? _imageBytes; // 解码完成后的图片字节
   double _progress = 0.0; // 当前解码进度 [0, 1]
   int _packetsReceived = 0; // 已接收的有效帧数
+  QrTransferMode _mode = QrTransferMode.fountain;
 
   @override
   void initState() {
@@ -102,7 +103,24 @@ class _ReceiverPageState extends State<ReceiverPage> {
             ),
         ],
       ),
-      body: _buildBody(),
+      body: Column(
+        children: [
+          _ModeSwitchTile(
+            value: _mode == QrTransferMode.fountain,
+            onChanged: (enabled) {
+              final nextMode =
+                  enabled ? QrTransferMode.fountain : QrTransferMode.sequential;
+              if (_mode == nextMode) return;
+              setState(() => _mode = nextMode);
+              if (_state == _ReceiverState.scanning ||
+                  _state == _ReceiverState.done) {
+                _reset();
+              }
+            },
+          ),
+          Expanded(child: _buildBody()),
+        ],
+      ),
     );
   }
 
@@ -112,20 +130,19 @@ class _ReceiverPageState extends State<ReceiverPage> {
         return const Center(child: CircularProgressIndicator());
 
       case _ReceiverState.permissionDenied:
-        return Center(
+        return const Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.no_photography, size: 64, color: Colors.red),
-              const SizedBox(height: 16),
-              const Text('需要摄像头权限', style: TextStyle(fontSize: 18)),
-              const SizedBox(height: 8),
-              const Text('请在设置中授予摄像头访问权限',
-                  style: TextStyle(color: Colors.grey)),
-              const SizedBox(height: 20),
+              Icon(Icons.no_photography, size: 64, color: Colors.red),
+              SizedBox(height: 16),
+              Text('需要摄像头权限', style: TextStyle(fontSize: 18)),
+              SizedBox(height: 8),
+              Text('请在设置中授予摄像头访问权限', style: TextStyle(color: Colors.grey)),
+              SizedBox(height: 20),
               ElevatedButton(
                 onPressed: openAppSettings,
-                child: const Text('打开设置'),
+                child: Text('打开设置'),
               ),
             ],
           ),
@@ -144,8 +161,8 @@ class _ReceiverPageState extends State<ReceiverPage> {
               padding: const EdgeInsets.all(8),
               child: Text(
                 _packetsReceived == 0
-                    ? '请将摄像头对准发送端的 QR 码'
-                    : '已接收 $_packetsReceived 帧  '
+                    ? '请将摄像头对准发送端的 QR 码（${_mode.label}）'
+                    : '${_mode.label}：已接收 $_packetsReceived 帧  '
                         '${(_progress * 100).toStringAsFixed(1)}%',
                 style: const TextStyle(fontSize: 13),
               ),
@@ -156,7 +173,8 @@ class _ReceiverPageState extends State<ReceiverPage> {
                 key: _receiverKey,
                 onDecoded: _onDecoded,
                 onProgress: _onProgress,
-                overlay: _ScanOverlay(),
+                mode: _mode,
+                overlay: const _ScanOverlay(),
               ),
             ),
           ],
@@ -181,7 +199,7 @@ class _ReceiverPageState extends State<ReceiverPage> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  '解码完成！共接收 $_packetsReceived 帧，'
+                  '${_mode.label}解码完成！共接收 $_packetsReceived 帧，'
                   '数据大小: ${_formatBytes(_imageBytes?.length ?? 0)}',
                   style: const TextStyle(fontSize: 13),
                 ),
@@ -260,6 +278,8 @@ enum _ReceiverState { requestingPermission, permissionDenied, scanning, done }
 
 /// 扫描区域半透明方形覆盖层。
 class _ScanOverlay extends StatelessWidget {
+  const _ScanOverlay();
+
   @override
   Widget build(BuildContext context) {
     return IgnorePointer(
@@ -280,12 +300,16 @@ class _OverlayPainter extends CustomPainter {
       width: dim,
       height: dim,
     );
+    final cutout = RRect.fromRectAndRadius(rect, const Radius.circular(24));
 
-    // Darken everything outside the scan square
+    // Draw only the outer mask so the camera preview remains visible inside.
+    final overlayPath = Path()
+      ..fillType = PathFillType.evenOdd
+      ..addRect(Offset.zero & size)
+      ..addRRect(cutout);
     final backgroundPaint = Paint()
       ..color = Colors.black.withValues(alpha: 0.45);
-    canvas.drawRect(Offset.zero & size, backgroundPaint);
-    canvas.drawRect(rect, Paint()..blendMode = BlendMode.clear);
+    canvas.drawPath(overlayPath, backgroundPaint);
 
     // Corners
     final cornerPaint = Paint()
@@ -309,4 +333,27 @@ class _OverlayPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _ModeSwitchTile extends StatelessWidget {
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  const _ModeSwitchTile({required this.value, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    final mode = value ? QrTransferMode.fountain : QrTransferMode.sequential;
+
+    return Material(
+      color: Theme.of(context).colorScheme.surfaceContainerLow,
+      child: SwitchListTile.adaptive(
+        value: value,
+        onChanged: onChanged,
+        secondary: Icon(value ? Icons.water_drop : Icons.view_week),
+        title: const Text('喷泉码加速'),
+        subtitle: Text('${mode.description} 发送端与接收端需保持一致。'),
+      ),
+    );
+  }
 }
