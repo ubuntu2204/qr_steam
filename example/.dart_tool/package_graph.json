@@ -22,6 +22,14 @@
       ]
     },
     {
+      "name": "flutter_avif_android",
+      "version": "3.1.0",
+      "dependencies": [
+        "flutter",
+        "flutter_avif_platform_interface"
+      ]
+    },
+    {
       "name": "flutter_lints",
       "version": "4.0.0",
       "dependencies": [
@@ -139,6 +147,15 @@
         "meta",
         "sky_engine",
         "vector_math"
+      ]
+    },
+    {
+      "name": "flutter_avif_platform_interface",
+      "version": "3.1.0",
+      "dependencies": [
+        "ffi",
+        "flutter",
+        "protobuf"
       ]
     },
     {
@@ -463,23 +480,6 @@
       ]
     },
     {
-      "name": "flutter_avif_android",
-      "version": "3.1.0",
-      "dependencies": [
-        "flutter",
-        "flutter_avif_platform_interface"
-      ]
-    },
-    {
-      "name": "flutter_avif_platform_interface",
-      "version": "3.1.0",
-      "dependencies": [
-        "ffi",
-        "flutter",
-        "protobuf"
-      ]
-    },
-    {
       "name": "screen_capturer_windows",
       "version": "0.2.2",
       "dependencies": [
@@ -549,6 +549,20 @@
     {
       "name": "characters",
       "version": "1.4.1",
+      "dependencies": []
+    },
+    {
+      "name": "protobuf",
+      "version": "3.1.0",
+      "dependencies": [
+        "collection",
+        "fixnum",
+        "meta"
+      ]
+    },
+    {
+      "name": "ffi",
+      "version": "2.2.0",
       "dependencies": []
     },
     {
@@ -626,11 +640,6 @@
       "dependencies": [
         "flutter"
       ]
-    },
-    {
-      "name": "ffi",
-      "version": "2.2.0",
-      "dependencies": []
     },
     {
       "name": "platform",
@@ -772,15 +781,6 @@
       ]
     },
     {
-      "name": "protobuf",
-      "version": "3.1.0",
-      "dependencies": [
-        "collection",
-        "fixnum",
-        "meta"
-      ]
-    },
-    {
       "name": "win32",
       "version": "5.15.0",
       "dependencies": [
@@ -798,6 +798,11 @@
       "dependencies": [
         "meta"
       ]
+    },
+    {
+      "name": "fixnum",
+      "version": "1.1.1",
+      "dependencies": []
     },
     {
       "name": "vm_service",
@@ -831,7 +836,7 @@
     },
     {
       "name": "code_assets",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "dependencies": [
         "collection",
         "hooks"
@@ -843,11 +848,6 @@
       "dependencies": [
         "path"
       ]
-    },
-    {
-      "name": "fixnum",
-      "version": "1.1.1",
-      "dependencies": []
     },
     {
       "name": "crypto",

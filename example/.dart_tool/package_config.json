@@ -39,7 +39,7 @@
     },
     {
       "name": "code_assets",
-      "rootUri": "file:///C:/Users/ubuntu/AppData/Local/Pub/Cache/hosted/pub.dev/code_assets-1.1.0",
+      "rootUri": "file:///C:/Users/ubuntu/AppData/Local/Pub/Cache/hosted/pub.dev/code_assets-1.2.0",
       "packageUri": "lib/",
       "languageVersion": "3.10"
     },
@@ -111,7 +111,7 @@
     },
     {
       "name": "flutter_avif_android",
-      "rootUri": "file:///C:/Users/ubuntu/AppData/Local/Pub/Cache/hosted/pub.dev/flutter_avif_android-3.1.0",
+      "rootUri": "../../third_party/flutter_avif_android",
       "packageUri": "lib/",
       "languageVersion": "3.4"
     },

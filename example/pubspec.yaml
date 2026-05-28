@@ -41,5 +41,9 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^4.0.0
 
+dependency_overrides:
+  flutter_avif_android:
+    path: ../third_party/flutter_avif_android
+
 flutter:
   uses-material-design: true
