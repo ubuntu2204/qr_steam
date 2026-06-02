@@ -3,7 +3,7 @@ description: >
   A Flutter plugin for streaming binary data via animated QR codes with
   sequential chunks or LT fountain codes. Inspired by txqr/QRStream and suitable
   for camera-based transfer of AVIF images and other payloads.
-version: 0.1.0
+version: 0.2.0
 homepage: https://github.com/ubuntu2204/qr_steam
 repository: https://github.com/ubuntu2204/qr_steam
 issue_tracker: https://github.com/ubuntu2204/qr_steam/issues

@@ -36,9 +36,7 @@ QrStreamSender widget               AVIF/WebP bytes
 
 ```yaml
 dependencies:
-  qr_steam:
-    git:
-      url: https://github.com/example/qr_steam
+  qr_steam: ^0.2.0
 ```
 
 ## Usage

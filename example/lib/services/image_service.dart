@@ -1,6 +1,7 @@
-import 'dart:io';
+import 'dart:io' show File, Process;
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_avif/flutter_avif.dart' as avif;
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:image/image.dart' as img;
@@ -28,14 +29,18 @@ class ScreenshotService {
   ///
   /// 仅支持桌面平台（Windows / macOS / Linux）。
   static Future<Uint8List> captureScreen() async {
-    if (!Platform.isWindows && !Platform.isMacOS && !Platform.isLinux) {
+    if (kIsWeb) throw UnsupportedError('captureScreen is not supported on Web');
+    final isDesktop = defaultTargetPlatform == TargetPlatform.windows ||
+        defaultTargetPlatform == TargetPlatform.macOS ||
+        defaultTargetPlatform == TargetPlatform.linux;
+    if (!isDesktop) {
       throw UnsupportedError('captureScreen is only supported on desktop');
     }
 
     final tempDir = await getTemporaryDirectory();
     final path = '${tempDir.path}/qr_steam_capture.png';
 
-    if (Platform.isWindows) {
+    if (defaultTargetPlatform == TargetPlatform.windows) {
       await _captureScreenWindows(path);
     } else {
       final result = await screenCapturer.capture(
@@ -84,7 +89,10 @@ class ScreenshotService {
 class ImageCompressService {
   /// 判断当前平台是否原生支持 HEIC 编码。
   static bool get heicSupported =>
-      Platform.isAndroid || Platform.isIOS || Platform.isMacOS;
+      !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.android ||
+          defaultTargetPlatform == TargetPlatform.iOS ||
+          defaultTargetPlatform == TargetPlatform.macOS);
 
   /// 压缩 [rawImageBytes]（PNG / JPEG / 任意可解码格式）并返回压缩后字节。
   ///

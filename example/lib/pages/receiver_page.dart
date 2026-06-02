@@ -1,9 +1,10 @@
-import 'dart:typed_data';
-
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_avif/flutter_avif.dart' as avif;
-import 'package:permission_handler/permission_handler.dart';
 import 'package:qr_steam/qr_steam.dart';
+
+// permission_handler 在 Web 上不可用，条件导入
+import '../services/permission_service.dart';
 
 /// Android 接收端页面：
 /// 1. 请求摄像头权限。
@@ -27,6 +28,10 @@ class _ReceiverPageState extends State<ReceiverPage> {
   int _packetsReceived = 0; // 已接收的有效帧数
   QrTransferMode _mode = QrTransferMode.fountain;
 
+  // 计时统计
+  DateTime? _startTime;
+  Duration? _elapsedTime;
+
   @override
   void initState() {
     super.initState();
@@ -39,13 +44,13 @@ class _ReceiverPageState extends State<ReceiverPage> {
 
   /// 请求摄像头权限，授权后进入扫描状态。
   Future<void> _requestCameraPermission() async {
-    final status = await Permission.camera.request();
+    final granted = await CameraPermissionService.requestCameraPermission();
     if (!mounted) return;
 
-    if (status.isGranted) {
-      setState(() => _state = _ReceiverState.scanning); // 权限已授予，开始扫描
+    if (granted) {
+      setState(() => _state = _ReceiverState.scanning);
     } else {
-      setState(() => _state = _ReceiverState.permissionDenied); // 权限被拒
+      setState(() => _state = _ReceiverState.permissionDenied);
     }
   }
 
@@ -53,19 +58,26 @@ class _ReceiverPageState extends State<ReceiverPage> {
   // 解码回调
   // ---------------------------------------------------------------------------
 
-  /// 喷泉码解码完成回调：保存图片字节并切换到完成状态。
+  /// 解码完成回调：保存图片字节、记录耗时。
   void _onDecoded(Uint8List data) {
+    final now = DateTime.now();
     setState(() {
-      _imageBytes = data; // 全量图片字节
-      _state = _ReceiverState.done; // 状态转为“已完成”
+      _imageBytes = data;
+      _state = _ReceiverState.done;
+      if (_startTime != null) {
+        _elapsedTime = now.difference(_startTime!);
+      }
     });
   }
 
-  /// 进度回调：更新解码进度条和帧计数。
+  /// 进度回调：更新解码进度条和帧计数，记录第一帧时间。
   void _onProgress(double progress, int received) {
+    if (received == 1 && _startTime == null) {
+      _startTime = DateTime.now();
+    }
     setState(() {
-      _progress = progress; // 0.0 – 1.0
-      _packetsReceived = received; // 已接收的有效包数
+      _progress = progress;
+      _packetsReceived = received;
     });
   }
 
@@ -79,9 +91,11 @@ class _ReceiverPageState extends State<ReceiverPage> {
       _imageBytes = null;
       _progress = 0.0;
       _packetsReceived = 0;
-      _state = _ReceiverState.scanning; // 回到扫描状态
+      _state = _ReceiverState.scanning;
+      _startTime = null;
+      _elapsedTime = null;
     });
-    _receiverKey.currentState?.reset(); // 通过 GlobalKey 重置部件内部解码器
+    _receiverKey.currentState?.reset();
   }
 
   // ---------------------------------------------------------------------------
@@ -105,13 +119,11 @@ class _ReceiverPageState extends State<ReceiverPage> {
       ),
       body: Column(
         children: [
-          _ModeSwitchTile(
-            value: _mode == QrTransferMode.fountain,
-            onChanged: (enabled) {
-              final nextMode =
-                  enabled ? QrTransferMode.fountain : QrTransferMode.sequential;
-              if (_mode == nextMode) return;
-              setState(() => _mode = nextMode);
+          _ModeSelector(
+            mode: _mode,
+            onChanged: (newMode) {
+              if (_mode == newMode) return;
+              setState(() => _mode = newMode);
               if (_state == _ReceiverState.scanning ||
                   _state == _ReceiverState.done) {
                 _reset();
@@ -130,20 +142,22 @@ class _ReceiverPageState extends State<ReceiverPage> {
         return const Center(child: CircularProgressIndicator());
 
       case _ReceiverState.permissionDenied:
-        return const Center(
+        return Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.no_photography, size: 64, color: Colors.red),
-              SizedBox(height: 16),
-              Text('需要摄像头权限', style: TextStyle(fontSize: 18)),
-              SizedBox(height: 8),
-              Text('请在设置中授予摄像头访问权限', style: TextStyle(color: Colors.grey)),
-              SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: openAppSettings,
-                child: Text('打开设置'),
-              ),
+              const Icon(Icons.no_photography, size: 64, color: Colors.red),
+              const SizedBox(height: 16),
+              const Text('需要摄像头权限', style: TextStyle(fontSize: 18)),
+              const SizedBox(height: 8),
+              const Text('请在设置中授予摄像头访问权限',
+                  style: TextStyle(color: Colors.grey)),
+              const SizedBox(height: 20),
+              if (!kIsWeb)
+                ElevatedButton(
+                  onPressed: CameraPermissionService.openSettings,
+                  child: const Text('打开设置'),
+                ),
             ],
           ),
         );
@@ -186,6 +200,13 @@ class _ReceiverPageState extends State<ReceiverPage> {
   }
 
   Widget _buildResultView() {
+    final elapsed = _elapsedTime;
+    final elapsedStr = elapsed == null
+        ? ''
+        : elapsed.inSeconds >= 1
+            ? '  耗时: ${elapsed.inMilliseconds / 1000.0}s'
+            : '  耗时: ${elapsed.inMilliseconds}ms';
+
     return Column(
       children: [
         // 成功提示条
@@ -200,7 +221,7 @@ class _ReceiverPageState extends State<ReceiverPage> {
               Expanded(
                 child: Text(
                   '${_mode.label}解码完成！共接收 $_packetsReceived 帧，'
-                  '数据大小: ${_formatBytes(_imageBytes?.length ?? 0)}',
+                  '数据大小: ${_formatBytes(_imageBytes?.length ?? 0)}$elapsedStr',
                   style: const TextStyle(fontSize: 13),
                 ),
               ),
@@ -276,7 +297,60 @@ class _ReceiverPageState extends State<ReceiverPage> {
 /// 页面内部状态枚举：摄像头权限请求 / 权限拒绝 / 扫描中 / 已完成。
 enum _ReceiverState { requestingPermission, permissionDenied, scanning, done }
 
-/// 扫描区域半透明方形覆盖层。
+/// 三选模式选择器：普通分片 / 喷泉码 / RaptorQ
+class _ModeSelector extends StatelessWidget {
+  final QrTransferMode mode;
+  final ValueChanged<QrTransferMode> onChanged;
+
+  const _ModeSelector({required this.mode, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Theme.of(context).colorScheme.surfaceContainerLow,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SegmentedButton<QrTransferMode>(
+              segments: const [
+                ButtonSegment(
+                  value: QrTransferMode.sequential,
+                  label: Text('普通'),
+                  icon: Icon(Icons.view_week, size: 16),
+                ),
+                ButtonSegment(
+                  value: QrTransferMode.fountain,
+                  label: Text('喷泉码'),
+                  icon: Icon(Icons.water_drop, size: 16),
+                ),
+                ButtonSegment(
+                  value: QrTransferMode.raptorQ,
+                  label: Text('RaptorQ'),
+                  icon: Icon(Icons.bolt, size: 16),
+                ),
+              ],
+              selected: {mode},
+              onSelectionChanged: (s) => onChanged(s.first),
+              style: const ButtonStyle(
+                visualDensity: VisualDensity.compact,
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(top: 2, bottom: 2),
+              child: Text(
+                mode.description,
+                style: const TextStyle(fontSize: 11, color: Colors.grey),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _ScanOverlay extends StatelessWidget {
   const _ScanOverlay();
 
@@ -333,27 +407,4 @@ class _OverlayPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-class _ModeSwitchTile extends StatelessWidget {
-  final bool value;
-  final ValueChanged<bool> onChanged;
-
-  const _ModeSwitchTile({required this.value, required this.onChanged});
-
-  @override
-  Widget build(BuildContext context) {
-    final mode = value ? QrTransferMode.fountain : QrTransferMode.sequential;
-
-    return Material(
-      color: Theme.of(context).colorScheme.surfaceContainerLow,
-      child: SwitchListTile.adaptive(
-        value: value,
-        onChanged: onChanged,
-        secondary: Icon(value ? Icons.water_drop : Icons.view_week),
-        title: const Text('喷泉码加速'),
-        subtitle: Text('${mode.description} 发送端与接收端需保持一致。'),
-      ),
-    );
-  }
 }

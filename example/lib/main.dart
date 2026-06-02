@@ -1,5 +1,4 @@
-import 'dart:io';
-
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'pages/home_page.dart';
@@ -15,7 +14,7 @@ void main() {
 /// 应用根组件。
 /// 根据当前运行平台自动路由到对应页面：
 /// - Windows  → 发送端（SenderPage）
-/// - Android  → 接收端（ReceiverPage）
+/// - Android / iOS / Web → 接收端（ReceiverPage）
 /// - 其他平台 → 首页（HomePage）
 class QrSteamApp extends StatelessWidget {
   const QrSteamApp({super.key});
@@ -40,9 +39,17 @@ class QrSteamApp extends StatelessWidget {
   }
 
   /// 根据运行平台返回对应的初始页面。
+  /// 使用 [defaultTargetPlatform] 替代 dart:io 的 Platform，兼容 Web。
   Widget _initialPage() {
-    if (Platform.isWindows) return const SenderPage(); // Windows 直接进发送页
-    if (Platform.isAndroid) return const ReceiverPage(); // Android 直接进接收页
-    return const HomePage(); // 其他平台显示首页导航
+    if (kIsWeb) return const ReceiverPage(); // Web 直接进接收页（手机浏览器）
+    switch (defaultTargetPlatform) {
+      case TargetPlatform.windows:
+        return const SenderPage(); // Windows 直接进发送页
+      case TargetPlatform.android:
+      case TargetPlatform.iOS:
+        return const ReceiverPage(); // 移动端直接进接收页
+      default:
+        return const HomePage(); // 其他平台显示首页导航
+    }
   }
 }

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../fountain/fountain_encoder.dart';
+import '../raptorq/raptorq_encoder.dart';
 import '../sequential/sequential_encoder.dart';
 import '../transfer/qr_transfer_mode.dart';
 
@@ -54,6 +55,7 @@ class QrStreamSender extends StatefulWidget {
 class _QrStreamSenderState extends State<QrStreamSender> {
   late FountainEncoder _fountainEncoder; // 喷泉码编码器
   late SequentialEncoder _sequentialEncoder; // 顺序分片编码器
+  late RaptorQEncoder _raptorQEncoder; // RaptorQ 编码器
   Timer? _timer; // 定时器，按 fps 刷新 QR
   String _currentQrData = ''; // 当前帧的 base64url 载荷
   int _frameIndex = 0; // 已播放帧数（展示用）
@@ -85,6 +87,7 @@ class _QrStreamSenderState extends State<QrStreamSender> {
       widget.data,
       chunkSize: widget.chunkSize,
     );
+    _raptorQEncoder = RaptorQEncoder(widget.data, chunkSize: widget.chunkSize);
     _frameIndex = 0;
     _currentChunkIndex = 0;
     _currentFountainSeqNo = 0;
@@ -95,7 +98,7 @@ class _QrStreamSenderState extends State<QrStreamSender> {
     );
   }
 
-  /// 推进到下一帧：生成一个喷泉码包并更新组件。
+  /// 推进到下一帧：生成一个编码包并更新组件。
   void _advance() {
     late final String qrData;
     late final int currentChunkIndex;
@@ -112,6 +115,11 @@ class _QrStreamSenderState extends State<QrStreamSender> {
         qrData = packet.toBase64Url();
         currentChunkIndex = packet.chunkIndex + 1;
         currentFountainSeqNo = 0;
+      case QrTransferMode.raptorQ:
+        final packet = _raptorQEncoder.nextPacket();
+        qrData = packet.toBase64Url();
+        currentChunkIndex = 0;
+        currentFountainSeqNo = packet.seqNo;
     }
 
     if (mounted) {
@@ -130,6 +138,8 @@ class _QrStreamSenderState extends State<QrStreamSender> {
         return _fountainEncoder.numChunks;
       case QrTransferMode.sequential:
         return _sequentialEncoder.numChunks;
+      case QrTransferMode.raptorQ:
+        return _raptorQEncoder.numChunks;
     }
   }
 
@@ -141,6 +151,11 @@ class _QrStreamSenderState extends State<QrStreamSender> {
       case QrTransferMode.sequential:
         return '顺序帧 #$_frameIndex  •  ${widget.mode.label}  •  '
             '块 $_currentChunkIndex/$_numChunks  •  ${widget.fps} fps';
+      case QrTransferMode.raptorQ:
+        final isRepair = _currentFountainSeqNo >= _numChunks;
+        return 'RaptorQ #$_currentFountainSeqNo  •  '
+            '${isRepair ? "修复符号" : "系统符号"}  •  '
+            '$_numChunks chunks  •  ${widget.fps} fps';
     }
   }
 

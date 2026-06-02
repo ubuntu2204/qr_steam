@@ -44,9 +44,7 @@ QrStreamSender 组件                     AVIF/HEIC 字节
 
 ```yaml
 dependencies:
-  qr_steam:
-    git:
-      url: https://github.com/example/qr_steam
+  qr_steam: ^0.2.0
 ```
 
 ## 使用方法

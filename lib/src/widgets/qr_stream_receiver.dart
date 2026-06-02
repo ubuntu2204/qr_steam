@@ -5,6 +5,8 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../fountain/fountain_decoder.dart';
 import '../fountain/fountain_packet.dart';
+import '../raptorq/raptorq_decoder.dart';
+import '../raptorq/raptorq_packet.dart';
 import '../sequential/sequential_decoder.dart';
 import '../sequential/sequential_packet.dart';
 import '../transfer/qr_transfer_mode.dart';
@@ -52,6 +54,7 @@ class QrStreamReceiver extends StatefulWidget {
 class QrStreamReceiverState extends State<QrStreamReceiver> {
   final FountainDecoder _fountainDecoder = FountainDecoder();
   final SequentialDecoder _sequentialDecoder = SequentialDecoder();
+  final RaptorQDecoder _raptorQDecoder = RaptorQDecoder();
   final MobileScannerController _controller = MobileScannerController(
     detectionSpeed: DetectionSpeed.normal, // 平衡扫描速度与 CPU 占用
   );
@@ -67,6 +70,7 @@ class QrStreamReceiverState extends State<QrStreamReceiver> {
   void reset() {
     _fountainDecoder.reset();
     _sequentialDecoder.reset();
+    _raptorQDecoder.reset();
     setState(() {
       _received = 0;
       _done = false;
@@ -125,6 +129,9 @@ class QrStreamReceiverState extends State<QrStreamReceiver> {
       case QrTransferMode.sequential:
         final pkt = SequentialPacket.fromBase64Url(raw);
         return _sequentialDecoder.addPacket(pkt);
+      case QrTransferMode.raptorQ:
+        final pkt = RaptorQPacket.fromBase64Url(raw);
+        return _raptorQDecoder.addPacket(pkt);
     }
   }
 
@@ -134,6 +141,8 @@ class QrStreamReceiverState extends State<QrStreamReceiver> {
         return _fountainDecoder.progress;
       case QrTransferMode.sequential:
         return _sequentialDecoder.progress;
+      case QrTransferMode.raptorQ:
+        return _raptorQDecoder.progress;
     }
   }
 
@@ -143,6 +152,8 @@ class QrStreamReceiverState extends State<QrStreamReceiver> {
         return _fountainDecoder.decodedData;
       case QrTransferMode.sequential:
         return _sequentialDecoder.decodedData;
+      case QrTransferMode.raptorQ:
+        return _raptorQDecoder.decodedData;
     }
   }
 
@@ -152,6 +163,8 @@ class QrStreamReceiverState extends State<QrStreamReceiver> {
         return _fountainDecoder.receivedPacketCount;
       case QrTransferMode.sequential:
         return _sequentialDecoder.receivedCount;
+      case QrTransferMode.raptorQ:
+        return _raptorQDecoder.receivedPacketCount;
     }
   }
 
