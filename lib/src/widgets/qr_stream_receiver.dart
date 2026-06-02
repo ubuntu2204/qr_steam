@@ -183,6 +183,8 @@ class QrStreamReceiverState extends State<QrStreamReceiver> {
         MobileScanner(
           controller: _controller,
           onDetect: _onDetect,
+          errorBuilder: (context, error, child) =>
+              _CameraErrorView(error: error),
         ),
 
         // 扫描区域覆盖层（可选）
@@ -238,6 +240,63 @@ class QrStreamReceiverState extends State<QrStreamReceiver> {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// 摄像头错误提示视图，根据错误类型给出具体建议。
+class _CameraErrorView extends StatelessWidget {
+  final MobileScannerException error;
+
+  const _CameraErrorView({required this.error});
+
+  @override
+  Widget build(BuildContext context) {
+    final String title;
+    final String hint;
+
+    switch (error.errorCode) {
+      case MobileScannerErrorCode.permissionDenied:
+        title = '摄像头权限被拒绝';
+        hint = '如果您通过 HTTP（非 HTTPS）访问本页面，\n'
+            '浏览器会阻止摄像头访问。\n'
+            '请改用 HTTPS 地址或在 localhost 打开。';
+      case MobileScannerErrorCode.unsupported:
+        title = '此设备或浏览器不支持摄像头';
+        hint = '请尝试使用 Chrome 或 Safari 的最新版本访问。';
+      default:
+        title = '摄像头启动失败';
+        hint = error.errorDetails?.message ?? '未知错误';
+    }
+
+    return ColoredBox(
+      color: Colors.black,
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.videocam_off, color: Colors.white70, size: 52),
+              const SizedBox(height: 16),
+              Text(
+                title,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 10),
+              Text(
+                hint,
+                style: const TextStyle(color: Colors.white70, fontSize: 13),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

@@ -114,15 +114,9 @@ class _SenderPageState extends State<SenderPage> {
       ),
       body: Column(
         children: [
-          _ModeSwitchTile(
-            value: _mode == QrTransferMode.fountain,
-            onChanged: (enabled) {
-              setState(() {
-                _mode = enabled
-                    ? QrTransferMode.fountain
-                    : QrTransferMode.sequential;
-              });
-            },
+          _ModeSelector(
+            mode: _mode,
+            onChanged: (newMode) => setState(() => _mode = newMode),
           ),
           Expanded(child: _buildBody()),
         ],
@@ -427,24 +421,54 @@ class _SettingsSheetState extends State<_SettingsSheet> {
   }
 }
 
-class _ModeSwitchTile extends StatelessWidget {
-  final bool value;
-  final ValueChanged<bool> onChanged;
+class _ModeSelector extends StatelessWidget {
+  final QrTransferMode mode;
+  final ValueChanged<QrTransferMode> onChanged;
 
-  const _ModeSwitchTile({required this.value, required this.onChanged});
+  const _ModeSelector({required this.mode, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
-    final mode = value ? QrTransferMode.fountain : QrTransferMode.sequential;
-
     return Material(
       color: Theme.of(context).colorScheme.surfaceContainerLow,
-      child: SwitchListTile.adaptive(
-        value: value,
-        onChanged: onChanged,
-        secondary: Icon(value ? Icons.water_drop : Icons.view_week),
-        title: const Text('喷泉码加速'),
-        subtitle: Text(mode.description),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SegmentedButton<QrTransferMode>(
+              segments: const [
+                ButtonSegment(
+                  value: QrTransferMode.sequential,
+                  label: Text('普通'),
+                  icon: Icon(Icons.view_week, size: 16),
+                ),
+                ButtonSegment(
+                  value: QrTransferMode.fountain,
+                  label: Text('喷泉码'),
+                  icon: Icon(Icons.water_drop, size: 16),
+                ),
+                ButtonSegment(
+                  value: QrTransferMode.raptorQ,
+                  label: Text('RaptorQ'),
+                  icon: Icon(Icons.bolt, size: 16),
+                ),
+              ],
+              selected: {mode},
+              onSelectionChanged: (s) => onChanged(s.first),
+              style: const ButtonStyle(
+                visualDensity: VisualDensity.compact,
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(top: 2, bottom: 2),
+              child: Text(
+                '${mode.description}  发送端与接收端模式需保持一致。',
+                style: const TextStyle(fontSize: 11, color: Colors.grey),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
