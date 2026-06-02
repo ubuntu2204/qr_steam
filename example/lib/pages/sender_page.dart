@@ -455,6 +455,7 @@ class _ModeSelector extends StatelessWidget {
                 ),
               ],
               selected: {mode},
+              showSelectedIcon: false,
               onSelectionChanged: (s) => onChanged(s.first),
               style: const ButtonStyle(
                 visualDensity: VisualDensity.compact,

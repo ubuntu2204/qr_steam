@@ -130,6 +130,25 @@ class _ReceiverPageState extends State<ReceiverPage> {
               }
             },
           ),
+          if (kIsWeb)
+            Container(
+              width: double.infinity,
+              color: Colors.amber.shade100,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              child: const Row(
+                children: [
+                  Icon(Icons.warning_amber_rounded,
+                      size: 16, color: Colors.orange),
+                  SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      '手机网页必须使用 HTTPS，否则摄像头无法启动（黑屏）',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           Expanded(child: _buildBody()),
         ],
       ),
@@ -332,6 +351,7 @@ class _ModeSelector extends StatelessWidget {
                 ),
               ],
               selected: {mode},
+              showSelectedIcon: false,
               onSelectionChanged: (s) => onChanged(s.first),
               style: const ButtonStyle(
                 visualDensity: VisualDensity.compact,

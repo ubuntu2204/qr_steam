@@ -83,6 +83,7 @@ class RaptorQDecoder {
 
       if (pending.length == 1) {
         _recoverBlock(pending[0], data);
+        _propagate(pending[0]);
         _checkComplete();
       } else {
         _activeRepairs.add(_ActiveRepair(pending, data));
@@ -122,27 +123,31 @@ class RaptorQDecoder {
     if (_recovered[idx] != null) return;
     _recovered[idx] = Uint8List.fromList(data);
     _recoveredCount++;
-    _propagate(idx);
+    // 调用方负责调用 _propagate(idx)
   }
 
-  void _propagate(int newIdx) {
-    bool progress = true;
-    while (progress) {
-      progress = false;
+  /// 使用队列（非递归）级联传播已恢复的块。
+  /// 每次从队列中取一个已恢复块，扫描所有活跃修复符号并消除该块，
+  /// 当修复符号剩余未知块变为 1 个时，直接恢复该块并加入队列继续传播。
+  void _propagate(int startIdx) {
+    final toProcess = <int>[startIdx];
+    while (toProcess.isNotEmpty) {
+      final idx = toProcess.removeLast();
       for (int i = _activeRepairs.length - 1; i >= 0; i--) {
         final repair = _activeRepairs[i];
-        if (repair.pending.remove(newIdx)) {
-          _xorInPlace(repair.data, _recovered[newIdx]!);
-          if (repair.pending.length == 1) {
-            final only = repair.pending.first;
-            _activeRepairs.removeAt(i);
-            if (_recovered[only] == null) {
-              _recoverBlock(only, repair.data);
-              progress = true;
-            }
-          } else if (repair.pending.isEmpty) {
-            _activeRepairs.removeAt(i);
+        if (!repair.pending.contains(idx)) continue;
+        repair.pending.remove(idx);
+        _xorInPlace(repair.data, _recovered[idx]!);
+        if (repair.pending.length == 1) {
+          final only = repair.pending.first;
+          _activeRepairs.removeAt(i);
+          if (_recovered[only] == null) {
+            _recovered[only] = Uint8List.fromList(repair.data);
+            _recoveredCount++;
+            toProcess.add(only);
           }
+        } else if (repair.pending.isEmpty) {
+          _activeRepairs.removeAt(i);
         }
       }
     }
