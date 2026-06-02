@@ -159,6 +159,12 @@ class RaptorQDecoder {
 
   static List<int> _deriveIndices(int seqNo, int degree, int numChunks) {
     final rng = Random(seqNo ^ 0xA5B2C3D4);
+    // 与编码器保持一致：先消耗度数计算所需的 RNG 调用
+    final maxDeg = min(4, numChunks);
+    if (maxDeg > 1) {
+      rng.nextInt(maxDeg - 1); // 消耗编码器确定 degree 时的同一 RNG 调用
+    }
+    // 现在开始采样索引
     if (degree >= numChunks) return List.generate(numChunks, (i) => i);
     final pool = List<int>.generate(numChunks, (i) => i);
     for (int i = 0; i < degree; i++) {
