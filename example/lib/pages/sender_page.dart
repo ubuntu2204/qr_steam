@@ -440,17 +440,26 @@ class _ModeSelector extends StatelessWidget {
               segments: const [
                 ButtonSegment(
                   value: QrTransferMode.sequential,
-                  label: Text('普通'),
+                  label: SizedBox(
+                    width: 64,
+                    child: Text('普通', textAlign: TextAlign.center),
+                  ),
                   icon: Icon(Icons.view_week, size: 16),
                 ),
                 ButtonSegment(
                   value: QrTransferMode.fountain,
-                  label: Text('喷泉码'),
+                  label: SizedBox(
+                    width: 64,
+                    child: Text('喷泉码', textAlign: TextAlign.center),
+                  ),
                   icon: Icon(Icons.water_drop, size: 16),
                 ),
                 ButtonSegment(
                   value: QrTransferMode.raptorQ,
-                  label: Text('RaptorQ'),
+                  label: SizedBox(
+                    width: 64,
+                    child: Text('RaptorQ', textAlign: TextAlign.center),
+                  ),
                   icon: Icon(Icons.bolt, size: 16),
                 ),
               ],

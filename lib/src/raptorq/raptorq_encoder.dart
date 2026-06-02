@@ -18,10 +18,12 @@ class RaptorQEncoder {
   final int _chunkSize;
   late final int _numChunks;
   late final List<Uint8List> _chunks;
+  late final int _repairPerCycle;
+  late final int _cycleLength;
 
   int _seqNo = 0;
-  // 系统符号阶段：seqNo in [0, _numChunks)
-  // 修复符号阶段：seqNo >= _numChunks
+  // 使用循环发送窗口，避免接收端后加入时永远收不到系统符号。
+  // 一个窗口内先发送系统符号，再发送少量修复符号。
 
   RaptorQEncoder(this._data, {int chunkSize = defaultChunkSize})
       : _chunkSize = chunkSize {
@@ -29,6 +31,8 @@ class RaptorQEncoder {
     assert(chunkSize > 0 && chunkSize <= 0xFFFF);
     _numChunks = (_data.length + chunkSize - 1) ~/ chunkSize;
     _chunks = _splitData();
+    _repairPerCycle = max(2, (_numChunks * 0.2).ceil());
+    _cycleLength = _numChunks + _repairPerCycle;
   }
 
   int get numChunks => _numChunks;
@@ -36,10 +40,14 @@ class RaptorQEncoder {
   int get dataLength => _data.length;
 
   /// 生成下一个编码包。
-  /// - seqNo < numChunks: 直接发送源块（系统符号）
-  /// - seqNo >= numChunks: 发送修复符号（多块 XOR）
+  /// - seqNo < numChunks: 发送系统符号
+  /// - seqNo >= numChunks: 发送修复符号
+  ///
+  /// 注意：seqNo 在循环窗口内取值 [0, cycleLength)，并周期性重复。
+  /// 这样接收端即使中途加入，也能在后续窗口中拿到系统符号。
   RaptorQPacket nextPacket() {
-    final seq = _seqNo++ & 0xFFFFFFFF;
+    final seq = _seqNo;
+    _seqNo = (_seqNo + 1) % _cycleLength;
 
     if (seq < _numChunks) {
       // 系统符号：直接发送第 seq 个原始块
