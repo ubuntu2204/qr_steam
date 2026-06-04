@@ -31,6 +31,104 @@
 
   <title>qr_steam_example</title>
   <link rel="manifest" href="manifest.json">
+
+  <!--
+    Permissions Policy: 声明页面需要使用摄像头（getUserMedia）。
+    部署时 HTTP 响应头也应包含:
+      Permissions-Policy: camera=(self), microphone=()
+    如果使用 iframe 嵌入，需要在 iframe 标签上添加 allow="camera" 属性。
+  -->
+  <meta http-equiv="Permissions-Policy" content="camera=(self), microphone=()">
+
+  <!--
+    Content Security Policy:
+    - default-src 'self': 仅允许同源资源
+    - script-src 'self' 'wasm-unsafe-eval': 允许 WASM 模块加载（Flutter WASM 必需）
+    - connect-src * : 允许任意网络连接
+    - media-src 'self' blob:: 允许摄像头 MediaStream
+    - img-src 'self' data: blob:: 允许图片加载
+    注意: 如果服务器通过 HTTP 头设置 CSP，此处 meta 标签会被覆盖，
+    请确保服务器 CSP 头包含相同策略。
+  -->
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self';
+                 script-src 'self' 'wasm-unsafe-eval';
+                 style-src 'self' 'unsafe-inline';
+                 connect-src *;
+                 media-src 'self' blob:;
+                 img-src 'self' data: blob:;
+                 font-src 'self' data:;">
+
+  <!--
+    MIME 类型错误检测脚本:
+    在 Flutter 引擎加载前注入，用于检测 .mjs/.wasm 文件的 MIME 类型问题。
+    如果服务器未正确配置 MIME 类型（如返回 application/octet-stream），
+    此脚本会提前给出诊断信息，而非仅显示白屏。
+  -->
+  <script>
+    // 检测服务器 MIME 类型配置是否正确
+    (function checkMimeConfiguration() {
+      'use strict';
+
+      // 拦截 module 加载错误，提供友好诊断
+      window.addEventListener('error', function(event) {
+        var msg = event.message || '';
+        if (msg.indexOf('MIME') !== -1 || msg.indexOf('octet-stream') !== -1) {
+          showMimeError(event.filename || event.message);
+        }
+      });
+
+      window.addEventListener('unhandledrejection', function(event) {
+        var reason = event.reason ? (event.reason.message || String(event.reason)) : '';
+        if (reason.indexOf('module') !== -1 || reason.indexOf('MIME') !== -1) {
+          showMimeError(reason);
+        }
+      });
+
+      function showMimeError(detail) {
+        // 避免重复显示
+        if (window.__mimeErrorShown) return;
+        window.__mimeErrorShown = true;
+
+        var errorDiv = document.createElement('div');
+        errorDiv.style.cssText = 'position:fixed;inset:0;display:flex;align-items:center;' +
+          'justify-content:center;background:#fff;z-index:99999;font-family:sans-serif;padding:24px;';
+        errorDiv.innerHTML =
+          '<div style="max-width:520px;text-align:center">' +
+          '<h2 style="color:#d32f2f;margin-bottom:12px">服务器 MIME 类型配置错误</h2>' +
+          '<p style="color:#333;line-height:1.6">Flutter Web (WASM) 模块无法加载。<br>' +
+          '服务器返回了错误的 MIME 类型（如 <code>application/octet-stream</code>），' +
+          '浏览器因安全策略拒绝了模块脚本。</p>' +
+          '<div style="background:#f5f5f5;border-radius:8px;padding:16px;margin:16px 0;text-align:left">' +
+          '<p style="margin:0 0 8px;font-weight:bold">解决方案（服务器端配置）：</p>' +
+          '<p style="margin:4px 0;font-size:13px"><b>Nginx:</b> 在 <code>mime.types</code> 中添加:<br>' +
+          '<code>application/javascript mjs;</code><br>' +
+          '<code>application/wasm wasm;</code></p>' +
+          '<p style="margin:4px 0;font-size:13px"><b>Apache:</b> 在配置中添加:<br>' +
+          '<code>AddType application/javascript .mjs</code><br>' +
+          '<code>AddType application/wasm .wasm</code></p>' +
+          '<p style="margin:4px 0;font-size:13px"><b>Express.js:</b> 使用:<br>' +
+          '<code>express.static("build/web", { setHeaders: ... })</code></p>' +
+          '</div>' +
+          '<p style="font-size:12px;color:#888;word-break:break-all">详情: ' + detail + '</p>' +
+          '</div>';
+        document.body.appendChild(errorDiv);
+      }
+
+      // 额外检查：验证关键资源的 MIME 类型
+      if (window.fetch) {
+        fetch('main.dart.mjs', { method: 'HEAD', mode: 'no-cors' })
+          .then(function(resp) {
+            var ct = resp.headers.get('content-type') || '';
+            if (ct && ct.indexOf('javascript') === -1 && ct.indexOf('text/') === -1) {
+              console.warn('[MIME检查] main.dart.mjs Content-Type: ' + ct +
+                ' (期望: application/javascript)');
+            }
+          })
+          .catch(function() { /* no-cors 模式下可能无法读取头 */ });
+      }
+    })();
+  </script>
 </head>
 <body>
   <!--

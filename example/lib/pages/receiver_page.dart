@@ -44,15 +44,27 @@ class _ReceiverPageState extends State<ReceiverPage> {
 
   /// 请求摄像头权限，授权后进入扫描状态。
   Future<void> _requestCameraPermission() async {
-    final granted = await CameraPermissionService.requestCameraPermission();
-    if (!mounted) return;
+    try {
+      _log('[初始化] 开始请求摄像头权限 (kIsWeb=$kIsWeb)...');
+      final granted = await CameraPermissionService.requestCameraPermission();
+      _log('[初始化] 权限请求结果: ${granted ? "已授权" : "已拒绝"}');
+      if (!mounted) return;
 
-    if (granted) {
-      setState(() => _state = _ReceiverState.scanning);
-    } else {
+      if (granted) {
+        setState(() => _state = _ReceiverState.scanning);
+      } else {
+        setState(() => _state = _ReceiverState.permissionDenied);
+      }
+    } catch (e, stack) {
+      _logErr('[初始化] 权限请求异常: $e');
+      _logErr('[初始化] 堆栈: $stack');
+      if (!mounted) return;
       setState(() => _state = _ReceiverState.permissionDenied);
     }
   }
+
+  static void _log(String msg) => print('[ReceiverPage] $msg');
+  static void _logErr(String msg) => print('[ReceiverPage][ERROR] $msg');
 
   // ---------------------------------------------------------------------------
   // 解码回调

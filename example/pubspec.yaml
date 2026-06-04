@@ -36,6 +36,9 @@ dependencies:
   # Camera & QR scanning permissions
   permission_handler: ^12.0.3
 
+  # Web API bindings (for camera permission detection in WASM mode)
+  web: ^1.1.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
